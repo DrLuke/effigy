@@ -1,7 +1,6 @@
 from PyQt5.QtWidgets import QGraphicsItem
 
 from PyQt5.QtWidgets import QGraphicsRectItem
-
 from PyQt5.QtCore import QRectF
 
 from enum import Enum
@@ -43,13 +42,16 @@ class NodeIO(QGraphicsItem):
     # Define a bounding rect for collision detection (needed for interacting with the IO)
     # TODO: Make this skinnable!
     def boundingRect(self):
-        pass
+        return QRectF(-5, -5, 10, 10)
 
     def addGraphicsItems(self):
         """Add Items to draw the IO pin. Can be overridden for custom graphics"""
         self.backgroundItem = QGraphicsRectItem(QRectF(-5, -5, 10, 10))
 
     def link(self, linkIO):
+        pass
+
+    def paint(self, *__args):
         pass
 
 class NodeInput(NodeIO):
