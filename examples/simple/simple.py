@@ -10,11 +10,22 @@ def main():
     scene = QNodeScene()
     editor = QNodeView(scene)
 
-    scene.addItem(TestNode())
+    a = TestNode()
+    b = TestNode()
+    c = TestNode()
+
+    scene.addItem(a)
+    scene.addItem(b)
+    scene.addItem(c)
 
     editor.show()
 
-    return app.exec_()
+    ret = app.exec_()
+
+    print(a.serializeinternal())
+    print(b.serializeinternal())
+
+    return ret
 
 if __name__ == "__main__":
     sys.exit(main())
