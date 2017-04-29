@@ -6,3 +6,9 @@ class QNodeScene(QGraphicsScene):
         self.undostack = QUndoStack()
 
         super().__init__(*__args)
+
+    def keyPressEvent(self, event):
+        if event.text() == "a":
+            self.undostack.undo()
+        else:
+            self.undostack.redo()

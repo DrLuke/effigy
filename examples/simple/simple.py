@@ -22,8 +22,10 @@ def main():
 
     ret = app.exec_()
 
-    print(a.serializeinternal())
-    print(b.serializeinternal())
+    print("EXITING:")
+    a.serializeinternal()
+    b.serializeinternal()
+    c.serializeinternal()
 
     return ret
 

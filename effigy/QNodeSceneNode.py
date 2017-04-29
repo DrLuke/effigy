@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QGraphicsItem
+from PyQt5.QtWidgets import QGraphicsItem, QUndoCommand
 
 import uuid
 
@@ -28,6 +28,8 @@ It should never be placeable in the editor. However if you DO see this in the ed
         self.id = uuid.uuid4().int
 
         self.setFlag(QGraphicsItem.ItemIsMovable)   # Item can be dragged with left-click
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
+        self.setFlag(QGraphicsItem.ItemIsSelectable)
 
         if deserializedata is not None:
             self.deserializeinternal(deserializedata)
@@ -88,10 +90,70 @@ It should never be placeable in the editor. However if you DO see this in the ed
         pass
 
     def mouseMoveEvent(self, QGraphicsSceneMouseEvent):
+        super().mouseMoveEvent(QGraphicsSceneMouseEvent)
+
+    class moveCommand(QUndoCommand):
+        def __init__(self, item, newPos, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+            self.selectedItems = set(item.scene().selectedItems())
+            self.positions = {}
+            for iteritem in self.selectedItems:
+                self.positions[iteritem.id] = [iteritem, None, None]
+
+            self.positions[item.id] = [item, item.pos(), newPos]
+
+            self.firstredo = True
+
+        def redo(self):
+            if not self.firstredo:
+                for position in self.positions.values():
+                    if position[2] is not None:
+                        position[0].setFlag(QGraphicsItem.ItemSendsGeometryChanges, False)  # Disable, or it will generate a move command
+                        position[0].setPos(position[2])
+                        position[0].setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+                        position[0].updateLinkGraphics()  # Update links
+            else:
+                self.firstredo = False  # Workaround, because the action already happens somewhere else when the command is created
+
+        def undo(self):
+            for position in self.positions.values():
+                if position[1] is not None:
+                    position[0].setFlag(QGraphicsItem.ItemSendsGeometryChanges, False)  # Disable, or it will generate a move command
+                    position[0].setPos(position[1])
+                    position[0].setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+                    position[0].updateLinkGraphics()  # Update links
+
+        def id(self):
+            return 1
+
+        def mergeWith(self, command):
+            # Merge command with this
+            # Note: 'command' is a newer command than this
+            if command.selectedItems == self.selectedItems:
+                for item in self.selectedItems:
+                    # Take start position from older command, and new position from newer command if it isn't None
+                    oldpos = self.positions[item.id][1] if self.positions[item.id][1] is not None else command.positions[item.id][1]
+                    # Take end position from newest command
+                    newpos = command.positions[item.id][2] if command.positions[item.id][2] is not None else self.positions[item.id][2]
+                    self.positions[item.id] = [self.positions[item.id][0], oldpos, newpos]
+                return True # Indicate success
+            else:
+                return False
+
+    def updateLinkGraphics(self):
         for IO in self.IO:
             for link in IO.nodeLinks:
                 link.updateBezier()
 
-        super().mouseMoveEvent(QGraphicsSceneMouseEvent)
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemPositionChange:
+            move = QNodeSceneNode.moveCommand(self, value)
+            self.scene().undostack.push(move)
+
+        if change == QGraphicsItem.ItemPositionHasChanged:
+            self.updateLinkGraphics()
+
+        return super().itemChange(change, value)
 
 
