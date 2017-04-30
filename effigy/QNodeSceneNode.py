@@ -65,7 +65,6 @@ It should never be placeable in the editor. However if you DO see this in the ed
         """Builtin internal node deserializer, shouldn't be called from outside"""
         pass
 
-
     def serialize(self):
         """Custom node serializer, can be used to serialize non-default parameters"""
         raise NotImplementedError("This method must be implemented in derived class")
@@ -86,20 +85,21 @@ It should never be placeable in the editor. However if you DO see this in the ed
         """Define appropriate bounding rect for Node body (necessary for interaction like dragging!)"""
         raise NotImplementedError("This method must be implemented in derived class")
 
+    def selectedChanged(self, state):
+        """React to being (de-)selected with visual cues"""
+        raise NotImplementedError("This method must be implemented in derived class")
+
     def paint(self, *__args):
         pass
-
-    def mouseMoveEvent(self, QGraphicsSceneMouseEvent):
-        super().mouseMoveEvent(QGraphicsSceneMouseEvent)
 
     class moveCommand(QUndoCommand):
         def __init__(self, item, newPos, *args, **kwargs):
             super().__init__(*args, **kwargs)
-
-            self.selectedItems = set(item.scene().selectedItems())
+            self.selectedItems = set([x for x in item.scene().selectedItems() if issubclass(type(x), QNodeSceneNode)])
             self.positions = {}
+
             for iteritem in self.selectedItems:
-                self.positions[iteritem.id] = [iteritem, None, None]
+                    self.positions[iteritem.id] = [iteritem, None, None]
 
             self.positions[item.id] = [item, item.pos(), newPos]
 
@@ -146,13 +146,22 @@ It should never be placeable in the editor. However if you DO see this in the ed
             for link in IO.nodeLinks:
                 link.updateBezier()
 
+    def mouseMoveEvent(self, QGraphicsSceneMouseEvent):
+        super().mouseMoveEvent(QGraphicsSceneMouseEvent)
+
+    def mouseDownEvent(selfs, QGraphicsSceneMouseEvent):
+        pass
+
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemPositionChange:
             move = QNodeSceneNode.moveCommand(self, value)
             self.scene().undostack.push(move)
 
-        if change == QGraphicsItem.ItemPositionHasChanged:
+        elif change == QGraphicsItem.ItemPositionHasChanged:
             self.updateLinkGraphics()
+
+        elif change == QGraphicsItem.ItemSelectedHasChanged:
+            self.selectedChanged(value)
 
         return super().itemChange(change, value)
 

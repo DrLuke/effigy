@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QGraphicsItem
 
 from PyQt5.QtWidgets import QGraphicsRectItem
-from PyQt5.QtCore import QRectF
+from PyQt5.QtCore import QRectF, Qt
 from PyQt5.QtGui import QTransform
 from PyQt5.QtWidgets import QUndoCommand
 
@@ -34,25 +34,6 @@ class NodeIO(QGraphicsItem):
     # Multiplicity for this class
     classMultiplicity = NodeIOMultiplicity.multiple
 
-    class LinkUndoCommand(QUndoCommand):
-        def __init__(self, startIO, endIO, scene, *args, **kwargs):
-            self.startIO = startIO
-            self.endIO = endIO
-            self.scene = scene
-
-            self.link = None
-            
-            super().__init__(*args, **kwargs)
-
-        def redo(self):
-            self.link = NodeLink(startIO=self.startIO, endIO=self.endIO)
-            self.link.updateBezier()
-
-            self.scene.addItem(self.link)
-
-        def undo(self):
-            self.startIO.deleteLink(self.link)
-            self.link = None
 
     def __init__(self, iotype, name, displaystr=None, *args, **kwargs):
         if type(iotype) is not type:
@@ -98,20 +79,68 @@ class NodeIO(QGraphicsItem):
         else:
             return self.recursiveIOCheck(item.parentItem())  # We must go deeper and deeper!
 
-    def mousePressEvent(self, QGraphicsSceneMouseEvent):
-        if type(self).classMultiplicity == NodeIOMultiplicity.single:
-            for link in self.nodeLinks:
-                self.deleteLink(link)
-        if self.tempNodeLink is not None:
-            pass    # TODO: Throw exception? Can this realistically ever happen?
-        else:
-            if self.classDirection == NodeIODirection.input:
-                # On inputs, io is the ending point of bezier curve
-                self.tempNodeLink = NodeLink(startIO=None, endIO=self)
+    class DeleteLinkCommand(QUndoCommand):
+        def __init__(self, io):
+            super().__init__()
+            self.io = io
+            self.linkIOs = []
+            self.scene = io.scene()
+
+            for link in io.nodeLinks:
+                self.linkIOs.append([link.startIO, link.endIO, link])
+
+        def redo(self):
+            for linkIO in self.linkIOs:
+                linkIO[0].deleteLink(linkIO[2])
+
+        def undo(self):
+            for linkIO in self.linkIOs:
+                linkIO[0].nodeLinks.append(linkIO[2])
+                linkIO[1].nodeLinks.append(linkIO[2])
+
+                self.scene.addItem(linkIO[2])
+
+
+    class CreateLinkCommand(QUndoCommand):
+        def __init__(self, startIO, endIO, scene, *args, **kwargs):
+            self.startIO = startIO
+            self.endIO = endIO
+            self.scene = scene
+
+            self.link = None
+
+            self.firstredo = True
+
+            super().__init__(*args, **kwargs)
+
+        def redo(self):
+            if not self.firstredo:
+                self.link.startIO.nodeLinks.append(self.link)
+                self.link.endIO.nodeLinks.append(self.link)
             else:
-                # Everywhere else, io is start point of bezier curve
-                self.tempNodeLink = NodeLink(startIO=self, endIO=None)
-            self.scene().addItem(self.tempNodeLink)
+                self.link = NodeLink(startIO=self.startIO, endIO=self.endIO)
+                self.firstredo = False
+
+            self.link.updateBezier()
+            self.scene.addItem(self.link)
+
+        def undo(self):
+            self.startIO.deleteLink(self.link)
+
+    def mousePressEvent(self, QGraphicsSceneMouseEvent):
+        if QGraphicsSceneMouseEvent.button() == Qt.LeftButton:
+            if type(self).classMultiplicity == NodeIOMultiplicity.single:
+                if self.nodeLinks:
+                    self.scene().undostack.push(NodeIO.DeleteLinkCommand(self))
+
+            if self.tempNodeLink is None:
+                if self.classDirection == NodeIODirection.input:
+                    # On inputs, io is the ending point of bezier curve
+                    self.tempNodeLink = NodeLink(startIO=None, endIO=self)
+                else:
+                    # Everywhere else, io is start point of bezier curve
+                    self.tempNodeLink = NodeLink(startIO=self, endIO=None)
+                self.scene().addItem(self.tempNodeLink)
 
 
     def mouseMoveEvent(self, QGraphicsSceneMouseEvent):
@@ -123,36 +152,40 @@ class NodeIO(QGraphicsItem):
                 self.tempNodeLink.updateBezier(overrideEndpos=QGraphicsSceneMouseEvent.scenePos())
 
     def mouseReleaseEvent(self, QGraphicsSceneMouseEvent):
-        if self.tempNodeLink is None:
-            return
+        if QGraphicsSceneMouseEvent.button() == Qt.LeftButton:
+            if self.tempNodeLink is None:
+                return
 
-        #  Delete temporary link
-        self.scene().removeItem(self.tempNodeLink)
-        self.tempNodeLink = None
+            #  Delete temporary link
+            self.scene().removeItem(self.tempNodeLink)
+            self.tempNodeLink = None
 
-        # Try to find any item at end coordinates
-        endpos = QGraphicsSceneMouseEvent.scenePos()
-        itematendpos = self.scene().itemAt(endpos, QTransform())
+            # Try to find any item at end coordinates
+            endpos = QGraphicsSceneMouseEvent.scenePos()
+            itematendpos = self.scene().itemAt(endpos, QTransform())
 
-        # Check if item is nodeIO
-        enditem = self.recursiveIOCheck(itematendpos)
-        if enditem is not None:
-            try:
-                # Check if IO directions are compatible
-                if self.classDirection == enditem.classDirection and not self.classDirection == NodeIODirection.any and not enditem.classDirection == NodeIODirection.any:
-                    raise InvalidLinkException
-                if self.classDirection == NodeIODirection.input:
-                    # On inputs, io is the ending point of bezier curve
-                    linkAction = type(self).LinkUndoCommand(startIO=enditem, endIO=self, scene=self.scene())
-                    self.scene().undostack.push(linkAction)
-                else:
-                    # Everywhere else, io is start point of bezier curve
-                    linkAction = type(self).LinkUndoCommand(startIO=self, endIO=enditem, scene=self.scene())
-                    self.scene().undostack.push(linkAction)
+            # Check if item is nodeIO
+            enditem = self.recursiveIOCheck(itematendpos)
+            if enditem is not None:
+                try:
+                    # Check if IO directions are compatible
+                    if self.classDirection == enditem.classDirection and not self.classDirection == NodeIODirection.any and not enditem.classDirection == NodeIODirection.any:
+                        raise InvalidLinkException
+                    if self.classDirection == NodeIODirection.input:
+                        # On inputs, io is the ending point of bezier curve
+                        linkAction = NodeIO.CreateLinkCommand(startIO=enditem, endIO=self, scene=self.scene())
+                        self.scene().undostack.push(linkAction)
+                    else:
+                        # Everywhere else, io is start point of bezier curve
+                        linkAction = NodeIO.CreateLinkCommand(startIO=self, endIO=enditem, scene=self.scene())
+                        self.scene().undostack.push(linkAction)
 
 
-            except InvalidLinkException:
-                pass
+                except InvalidLinkException:
+                    pass
+        elif QGraphicsSceneMouseEvent.button() == Qt.RightButton:
+            self.scene().undostack.push(NodeIO.DeleteLinkCommand(self))
+
 
 
 

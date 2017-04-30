@@ -1,7 +1,7 @@
 from effigy import QNodeSceneNode, NodeIO, NodeInput, NodeOutput
 
 from PyQt5.QtWidgets import QGraphicsRectItem
-from PyQt5.QtCore import QRectF, QPointF
+from PyQt5.QtCore import QRectF, QPointF, Qt
 from PyQt5.QtGui import QPen, QColor, QBrush
 
 class TestNode(QNodeSceneNode):
@@ -24,3 +24,8 @@ class TestNode(QNodeSceneNode):
     def addGraphicsItems(self):
         self.mainRect = QGraphicsRectItem(QRectF(-15, -15, 30, 30), self)
 
+    def selectedChanged(self, state):
+        if state:
+            self.mainRect.setPen(QPen(Qt.red))
+        else:
+            self.mainRect.setPen(QPen(Qt.black))

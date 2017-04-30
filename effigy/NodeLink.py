@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QGraphicsItem
 
 from PyQt5.QtWidgets import QGraphicsRectItem, QGraphicsPathItem
-from PyQt5.QtCore import QRectF, QPointF
+from PyQt5.QtCore import QRectF, QPointF, Qt
 from PyQt5.QtGui import QBrush, QColor, QPainterPath, QPen
 
 from enum import Enum
@@ -24,7 +24,7 @@ class NodeLink(QGraphicsPathItem):
     def __init__(self, startIO=None, endIO=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-
+        self.setFlag(QGraphicsItem.ItemIsSelectable)
         self.startIO = startIO
         self.endIO = endIO
 
@@ -73,3 +73,11 @@ class NodeLink(QGraphicsPathItem):
                      endpos)
 
         self.setPath(path)
+
+    def paint(self, painter, option, widget=None):
+        if self.isSelected():
+            self.setPen(QPen(Qt.red))
+        else:
+            self.setPen(QPen(Qt.black))
+        painter.setPen(self.pen())
+        painter.drawPath(self.path())
