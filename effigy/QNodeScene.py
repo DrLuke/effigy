@@ -26,12 +26,14 @@ class QNodeScene(QGraphicsScene):
 
         links = [x for x in selectedItems if issubclass(type(x), NodeLink)]
         nodes = [x for x in selectedItems if issubclass(type(x), QNodeSceneNode)]
-        remainder = [x for x in selectedItems if not issubclass(type(x), (QNodeSceneNode, NodeLink))]
+        #remainder = [x for x in selectedItems if not issubclass(type(x), (QNodeSceneNode, NodeLink))]
 
         for link in links:
             self.undostack.push(type(link.startIO).DeleteLinkCommand(link.startIO))
 
         for node in nodes:
+            for io in node.IO:
+                self.undostack.push(type(io).DeleteLinkCommand(io))
             self.undostack.push(QNodeScene.DeleteNodeCommand(node))
 
         self.undostack.endMacro()

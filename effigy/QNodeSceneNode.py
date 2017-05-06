@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QGraphicsItem, QUndoCommand
+from PyQt5.QtCore import Qt
 
 import uuid
 
@@ -137,7 +138,7 @@ It should never be placeable in the editor. However if you DO see this in the ed
                     # Take end position from newest command
                     newpos = command.positions[item.id][2] if command.positions[item.id][2] is not None else self.positions[item.id][2]
                     self.positions[item.id] = [self.positions[item.id][0], oldpos, newpos]
-                return True # Indicate success
+                return True     # Indicate success
             else:
                 return False
 
@@ -149,8 +150,17 @@ It should never be placeable in the editor. However if you DO see this in the ed
     def mouseMoveEvent(self, QGraphicsSceneMouseEvent):
         super().mouseMoveEvent(QGraphicsSceneMouseEvent)
 
-    def mouseDownEvent(selfs, QGraphicsSceneMouseEvent):
-        pass
+    def mousePressEvent(self, QGraphicsSceneMouseEvent):
+        selectedNodes = [x for x in self.scene().selectedItems() if issubclass(type(x), QNodeSceneNode)]
+        if QGraphicsSceneMouseEvent.button() == Qt.LeftButton and len(selectedNodes) > 1:
+            self.scene().undostack.beginMacro("Move multiple nodes")
+        super().mousePressEvent(QGraphicsSceneMouseEvent)
+
+    def mouseReleaseEvent(self, QGraphicsSceneMouseEvent):
+        selectedNodes = [x for x in self.scene().selectedItems() if issubclass(type(x), QNodeSceneNode)]
+        if QGraphicsSceneMouseEvent.button() == Qt.LeftButton and len(selectedNodes) > 1:
+            self.scene().undostack.endMacro()
+        super().mouseReleaseEvent(QGraphicsSceneMouseEvent)
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemPositionChange:
