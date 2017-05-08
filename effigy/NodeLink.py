@@ -36,6 +36,7 @@ class NodeLink(QGraphicsPathItem):
             # Start type can be casted to end type
             if issubclass(startIO.iotype, endIO.iotype):
 
+                # Remove duplicates
                 for link in self.startIO.nodeLinks:
                     if link.startIO == self.startIO and link.endIO == self.endIO:
                         self.startIO.nodeLinks.remove(link)

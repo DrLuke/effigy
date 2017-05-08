@@ -1,15 +1,28 @@
 from PyQt5.QtWidgets import QGraphicsScene, QUndoStack, QUndoCommand
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QTransform
 from effigy.QNodeSceneNode import QNodeSceneNode
 from effigy.NodeIO import NodeIO
 from effigy.NodeLink import NodeLink
 
+class NodeSceneModuleManager():
+    def __init__(self, scene):
+        self.scene = scene
+
+    def selectNode(self, position, inType:type=None, outType:type=None):
+        return None
 
 class QNodeScene(QGraphicsScene):
-    def __init__(self, *__args):
+    def __init__(self, moduleManager=None, *__args):
         self.undostack = QUndoStack()
+        if moduleManager:
+            self.moduleManager = moduleManager
+        else:
+            self.moduleManager = NodeSceneModuleManager(self)
 
         super().__init__(*__args)
+
+        #self.mouseDoubleClickEvent.connect(self.mouseDoubleClickEvent)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_A:
@@ -32,7 +45,7 @@ class QNodeScene(QGraphicsScene):
             self.undostack.push(type(link.startIO).DeleteLinkCommand(link.startIO))
 
         for node in nodes:
-            for io in node.IO:
+            for io in node.IO.values():
                 self.undostack.push(type(io).DeleteLinkCommand(io))
             self.undostack.push(QNodeScene.DeleteNodeCommand(node))
 
@@ -50,3 +63,7 @@ class QNodeScene(QGraphicsScene):
 
         def undo(self):
             self.scene.addItem(self.node)
+
+    def mouseDoubleClickEvent(self, mouseEvent):
+        if mouseEvent.button() == Qt.LeftButton and not self.itemAt(mouseEvent.scenePos(), QTransform()):
+            self.moduleManager.selectNode(mouseEvent.scenePos())

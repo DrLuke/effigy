@@ -4,6 +4,11 @@ import sys
 
 from examples.simple.testnode import TestNode
 
+def customexcepthook(type, value, traceback):
+    print(traceback.print_exc())
+    raise(Exception())
+sys.excepthook = customexcepthook
+
 def main():
     app = QApplication(sys.argv)
 
@@ -23,7 +28,8 @@ def main():
     ret = app.exec_()
 
     print("EXITING:")
-    a.serializeinternal()
+    foo = a.serializeinternal()
+    a.deserializeinternal(foo)
     b.serializeinternal()
     c.serializeinternal()
 

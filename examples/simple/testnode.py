@@ -12,11 +12,11 @@ class TestNode(QNodeSceneNode):
     def addIO(self):
         newnode = NodeOutput(str, parent=self, name="output")
         newnode.setPos(20, 10)
-        self.IO.append(newnode)
+        self.IO["output"] = newnode
 
         newnode = NodeInput(str, parent=self, name="input")
         newnode.setPos(-20, 10)
-        self.IO.append(newnode)
+        self.IO["input"] = newnode
 
     def boundingRect(self):
         return self.mainRect.rect()
@@ -29,3 +29,9 @@ class TestNode(QNodeSceneNode):
             self.mainRect.setPen(QPen(Qt.red))
         else:
             self.mainRect.setPen(QPen(Qt.black))
+
+    def serialize(self):
+        return {"testdata": self.id}
+
+    def deserialize(self, data):
+        print("This node has data: %s" % data["testdata"])

@@ -179,10 +179,22 @@ class NodeIO(QGraphicsItem):
                         # Everywhere else, io is start point of bezier curve
                         linkAction = NodeIO.CreateLinkCommand(startIO=self, endIO=enditem, scene=self.scene())
                         self.scene().undostack.push(linkAction)
-
-
                 except InvalidLinkException:
                     pass
+
+            else:   # No node found. Launch the module selector to spawn a compatible node
+                self.scene().undostack.beginMacro("Create node from link")
+                if self.classDirection == NodeIODirection.input:
+                    returnio = self.scene().moduleManagerselectNode(QGraphicsSceneMouseEvent.pos(), inType=self.iotype)
+                    if issubclass(type(returnio), NodeIO):
+                        linkAction = NodeIO.CreateLinkCommand(startIO=returnio, endIO=self, scene=self.scene())
+                        self.scene().undostack.push(linkAction)
+                else:
+                    returnio = self.scene().moduleManager.selectNode(QGraphicsSceneMouseEvent.pos(), outType=self.iotype)
+                    if issubclass(type(returnio), NodeIO):
+                        linkAction = NodeIO.CreateLinkCommand(startIO=self, endIO=returnio, scene=self.scene())
+                        self.scene().undostack.push(linkAction)
+                self.scene().undostack.endMacro()
         elif QGraphicsSceneMouseEvent.button() == Qt.RightButton:
             self.scene().undostack.push(NodeIO.DeleteLinkCommand(self))
 
