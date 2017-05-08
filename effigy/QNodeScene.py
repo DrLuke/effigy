@@ -5,9 +5,9 @@ from effigy.QNodeSceneNode import QNodeSceneNode
 from effigy.NodeIO import NodeIO
 from effigy.NodeLink import NodeLink
 
-class NodeSceneModuleManager():
-    def __init__(self, scene):
-        self.scene = scene
+class NodeSceneModuleManager:
+    def __init__(self):
+        self.scene = None
 
     def selectNode(self, position, inType:type=None, outType:type=None):
         return None
@@ -18,7 +18,8 @@ class QNodeScene(QGraphicsScene):
         if moduleManager:
             self.moduleManager = moduleManager
         else:
-            self.moduleManager = NodeSceneModuleManager(self)
+            self.moduleManager = NodeSceneModuleManager()
+        self.moduleManager.scene = self
 
         super().__init__(*__args)
 

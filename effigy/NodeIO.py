@@ -185,7 +185,7 @@ class NodeIO(QGraphicsItem):
             else:   # No node found. Launch the module selector to spawn a compatible node
                 self.scene().undostack.beginMacro("Create node from link")
                 if self.classDirection == NodeIODirection.input:
-                    returnio = self.scene().moduleManagerselectNode(QGraphicsSceneMouseEvent.pos(), inType=self.iotype)
+                    returnio = self.scene().moduleManager.selectNode(QGraphicsSceneMouseEvent.pos(), inType=self.iotype)
                     if issubclass(type(returnio), NodeIO):
                         linkAction = NodeIO.CreateLinkCommand(startIO=returnio, endIO=self, scene=self.scene())
                         self.scene().undostack.push(linkAction)
