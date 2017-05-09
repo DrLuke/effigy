@@ -2,8 +2,7 @@ from PyQt5.QtWidgets import QGraphicsScene, QUndoStack, QUndoCommand
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QTransform
 from effigy.QNodeSceneNode import QNodeSceneNode
-from effigy.NodeIO import NodeIO
-from effigy.NodeLink import NodeLink
+from effigy.NodeIO import NodeIO, NodeLink
 
 class NodeSceneModuleManager:
     def __init__(self):

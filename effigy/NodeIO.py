@@ -1,14 +1,15 @@
 from PyQt5.QtWidgets import QGraphicsItem
 
-from PyQt5.QtWidgets import QGraphicsRectItem
-from PyQt5.QtCore import QRectF, Qt
-from PyQt5.QtGui import QTransform
+from PyQt5.QtWidgets import QGraphicsRectItem, QGraphicsPathItem, QUndoCommand, QGraphicsItem
+from PyQt5.QtCore import QRectF, QPointF, Qt
+from PyQt5.QtGui import QTransform, QBrush, QColor, QPainterPath, QPen
 from PyQt5.QtWidgets import QUndoCommand
+
 
 from enum import Enum
 import uuid
 
-from effigy.NodeLink import NodeLink, InvalidLinkException
+#from effigy.NodeLink import NodeLink, InvalidLinkException
 
 class NodeIODirection(Enum):
     """Establish if IO direction is input, output or any"""
@@ -35,7 +36,7 @@ class NodeIO(QGraphicsItem):
     classMultiplicity = NodeIOMultiplicity.multiple
 
 
-    def __init__(self, iotype, name, displaystr=None, *args, **kwargs):
+    def __init__(self, iotype, name, displaystr=None, setID=uuid.uuid4().int, *args, **kwargs):
         if type(iotype) is not type:
             raise TypeError("iotype argument is of type '%s', but must be of type 'type'." % type(iotype))
 
@@ -43,7 +44,8 @@ class NodeIO(QGraphicsItem):
 
         self.iotype = iotype
         self.iodirection = NodeIO.classDirection
-        self.id = uuid.uuid4().int  # Unique ID to identify node across multiple sessions.
+
+        self.id = setID  # Unique ID to identify node across multiple sessions.
 
         self.name = str(name)   # Each IO needs a name unique across all instances of the node class using it
         self.displaystring = displaystr     # Preferred String to display next to IO when rendering. Not required for it to work.
@@ -118,7 +120,7 @@ class NodeIO(QGraphicsItem):
                 self.link.startIO.nodeLinks.append(self.link)
                 self.link.endIO.nodeLinks.append(self.link)
             else:
-                self.link = NodeLink(startIO=self.startIO, endIO=self.endIO)
+                self.link = NodeLink(startIO=self.startIO, endIO=self.endIO, undostack=self.scene.undostack)
                 self.firstredo = False
 
             self.link.updateBezier()
@@ -129,6 +131,7 @@ class NodeIO(QGraphicsItem):
 
     def mousePressEvent(self, QGraphicsSceneMouseEvent):
         if QGraphicsSceneMouseEvent.button() == Qt.LeftButton:
+            self.scene().undostack.beginMacro("Link Nodes")
             if type(self).classMultiplicity == NodeIOMultiplicity.single:
                 if self.nodeLinks:
                     self.scene().undostack.push(NodeIO.DeleteLinkCommand(self))
@@ -168,6 +171,8 @@ class NodeIO(QGraphicsItem):
             enditem = self.recursiveIOCheck(itematendpos)
             if enditem is not None:
                 try:
+                    print(self.classMultiplicity)
+                    print(enditem.classMultiplicity)
                     # Check if IO directions are compatible
                     if self.classDirection == enditem.classDirection and not self.classDirection == NodeIODirection.any and not enditem.classDirection == NodeIODirection.any:
                         raise InvalidLinkException
@@ -195,6 +200,7 @@ class NodeIO(QGraphicsItem):
                         linkAction = NodeIO.CreateLinkCommand(startIO=self, endIO=returnio, scene=self.scene())
                         self.scene().undostack.push(linkAction)
                 self.scene().undostack.endMacro()
+            self.scene().undostack.endMacro()
         elif QGraphicsSceneMouseEvent.button() == Qt.RightButton:
             self.scene().undostack.push(NodeIO.DeleteLinkCommand(self))
 
@@ -210,3 +216,89 @@ class NodeOutput(NodeIO):
     """General Output class for Node links. See NodeIO class for more information."""
     classDirection = NodeIODirection.output
     classMultiplicity = NodeIOMultiplicity.single
+
+
+class InvalidLinkException(Exception):
+    pass
+
+
+class DeleteLinkFromMultiplicityCommand(QUndoCommand):
+    """Only use in combination of the "Link IO" macro from NodeIO"""
+    def __init__(self, link):
+        super().__init__()
+        self.link = link
+        self.scene = self.link.scene()
+
+    def redo(self):
+        self.link.startIO.nodeLinks.remove(self.link)
+        self.link.endIO.nodeLinks.remove(self.link)
+        self.scene.removeItem(self.link)
+
+    def undo(self):
+        self.link.startIO.nodeLinks.append(self.link)
+        self.link.endIO.nodeLinks.append(self.link)
+        self.scene.addItem(self.link)
+
+class NodeLink(QGraphicsPathItem):
+    def __init__(self, startIO=None, endIO=None, undostack=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setFlag(QGraphicsItem.ItemIsSelectable)
+        self.startIO = startIO
+        self.endIO = endIO
+        self.undostack = undostack
+
+        # Connections with yourself are not allowed
+        if startIO == endIO:
+            raise InvalidLinkException("startIO (ID: %s) and endIO (ID: %s) can not be the same!" % (startIO.id, endIO.id))
+
+        if startIO is not None and endIO is not None:
+            # Start type can be casted to end type
+            if issubclass(startIO.iotype, endIO.iotype):
+
+                # Remove duplicates
+                for link in self.startIO.nodeLinks:
+                    if link.startIO == self.startIO and link.endIO == self.endIO:
+                        self.startIO.nodeLinks.remove(link)
+
+                # Remove all other links if multiplicity calls for it
+                if type(self.startIO).classMultiplicity == NodeIOMultiplicity.single:
+                    for link in self.startIO.nodeLinks:
+                        self.undostack.push(DeleteLinkFromMultiplicityCommand(link))
+                self.startIO.nodeLinks.append(self)
+
+                # Remove all other links if multiplicity calls for it
+                if type(self.endIO).classMultiplicity == NodeIOMultiplicity.single:
+                    for link in self.endIO.nodeLinks:
+                        self.undostack.push(DeleteLinkFromMultiplicityCommand(link))
+                self.endIO.nodeLinks.append(self)
+
+    def updateBezier(self, overrideStartpos=QPointF(0, 0), overrideEndpos=QPointF(0, 0)):
+        path = QPainterPath()
+
+        if self.startIO is not None:
+            startpos = self.startIO.scenePos()
+        else:
+            startpos = overrideStartpos
+
+        if self.endIO is not None:
+            endpos = self.endIO.scenePos()
+        else:
+            endpos = overrideEndpos
+
+        path.moveTo(startpos)
+
+        controlpoint = QPointF(abs((endpos - startpos).x()) * 0.8, 0)
+        path.cubicTo(startpos + controlpoint,
+                     endpos - controlpoint,
+                     endpos)
+
+        self.setPath(path)
+
+    def paint(self, painter, option, widget=None):
+        if self.isSelected():
+            self.setPen(QPen(Qt.red))
+        else:
+            self.setPen(QPen(Qt.black))
+        painter.setPen(self.pen())
+        painter.drawPath(self.path())

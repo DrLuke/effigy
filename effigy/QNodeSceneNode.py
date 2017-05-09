@@ -3,8 +3,7 @@ from PyQt5.QtCore import Qt
 
 import uuid
 
-from effigy.NodeIO import NodeIO
-from effigy.NodeLink import NodeLink
+from effigy.NodeIO import NodeIO, NodeLink
 
 
 class QNodeSceneNode(QGraphicsItem):
@@ -22,15 +21,17 @@ class QNodeSceneNode(QGraphicsItem):
     description = """This node is the base class for all nodes.
 It should never be placeable in the editor. However if you DO see this in the editor, something went wrong!"""
 
-    def __init__(self, deserializedata=None, *args, **kwargs):
+    def __init__(self, deserializedata=None, setID=uuid.uuid4().int, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.IO = {}    # Stores all IO for this Node
 
+        self.id = setID
+
         if deserializedata is not None:
             self.deserializeinternal(deserializedata)
-        else:
-            self.id = uuid.uuid4().int
+
+
 
         self.setFlag(QGraphicsItem.ItemIsMovable)   # Item can be dragged with left-click
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
@@ -61,11 +62,11 @@ It should never be placeable in the editor. However if you DO see this in the ed
         serdata["type"] = str(type(self).author + "." + type(self).modulename + "." + type(self).__name__)
         serdata["io"] = {}
         for io in self.IO.values():
-            serdata["io"][io.name] = {}
-            serdata["io"][io.name]["id"] = io.id
-            serdata["io"][io.name]["links"] = []
+            serdata["io"][io.id] = {}
+            serdata["io"][io.id]["name"] = io.name
+            serdata["io"][io.id]["links"] = []
             for nodeLink in io.nodeLinks:
-                serdata["io"][io.name]["links"].append([nodeLink.startIO.id, nodeLink.endIO.id])
+                serdata["io"][io.name]["links"].append([nodeLink.startIO.id, nodeLink.endIO.id, nodeLink.startIO.parent.id])
         serdata["nodedata"] = self.serialize()
 
         return serdata
@@ -73,11 +74,10 @@ It should never be placeable in the editor. However if you DO see this in the ed
     def deserializeinternal(self, data):
         """Builtin internal node deserializer, shouldn't be called from outside"""
         self.setPos(data["pos"][0], data["pos"][1])
-        self.id = data["uuid"]
 
         # Reconstruct all
         sceneios = [x for x in self.scene().items() if issubclass(type(x), NodeIO)]
-        for pair in data["io"]:
+        for pair in data["io"].values():    # FIXME: this is WRONG! How do I deserialize the node ID in a general way?
             startio = None
             endio = None
             for io in sceneios:
@@ -86,7 +86,7 @@ It should never be placeable in the editor. However if you DO see this in the ed
                 if io.id == pair[1]:
                     endio = io
             if startio is not None and endio is not None:
-                NodeLink(startio, endio)
+                NodeLink(startio, endio, setID=pair["id"])
 
         self.deserialize(data["nodedata"])
 
