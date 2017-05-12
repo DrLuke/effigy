@@ -36,7 +36,7 @@ class NodeIO(QGraphicsItem):
     classMultiplicity = NodeIOMultiplicity.multiple
 
 
-    def __init__(self, iotype, name, displaystr=None, setID=uuid.uuid4().int, *args, **kwargs):
+    def __init__(self, iotype, name, displaystr=None, setID=None, *args, **kwargs):
         if type(iotype) is not type:
             raise TypeError("iotype argument is of type '%s', but must be of type 'type'." % type(iotype))
 
@@ -45,7 +45,10 @@ class NodeIO(QGraphicsItem):
         self.iotype = iotype
         self.iodirection = NodeIO.classDirection
 
-        self.id = setID  # Unique ID to identify node across multiple sessions.
+        if setID is not None:
+            self.id = setID  # Unique ID to identify io across multiple sessions.
+        else:
+            self.id = uuid.uuid4().int
 
         self.name = str(name)   # Each IO needs a name unique across all instances of the node class using it
         self.displaystring = displaystr     # Preferred String to display next to IO when rendering. Not required for it to work.

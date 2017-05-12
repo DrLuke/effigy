@@ -21,12 +21,15 @@ class QNodeSceneNode(QGraphicsItem):
     description = """This node is the base class for all nodes.
 It should never be placeable in the editor. However if you DO see this in the editor, something went wrong!"""
 
-    def __init__(self, deserializedata=None, setID=uuid.uuid4().int, *args, **kwargs):
+    def __init__(self, deserializedata=None, setID=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.IO = {}    # Stores all IO for this Node
 
-        self.id = setID
+        if setID is not None:
+            self.id = setID  # Unique ID to identify node across multiple sessions.
+        else:
+            self.id = uuid.uuid4().int
 
         if deserializedata is not None:
             self.deserializeinternal(deserializedata)
