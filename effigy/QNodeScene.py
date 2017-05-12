@@ -66,4 +66,6 @@ class QNodeScene(QGraphicsScene):
 
     def mouseDoubleClickEvent(self, mouseEvent):
         if mouseEvent.button() == Qt.LeftButton and not self.itemAt(mouseEvent.scenePos(), QTransform()):
-            self.moduleManager.selectNode(mouseEvent.scenePos())
+            self.undostack.beginMacro("Place Node")
+            self.moduleManager.selectNode(mouseEvent.scenePos())    # Open Dialog for spawning new node
+            self.undostack.endMacro()
