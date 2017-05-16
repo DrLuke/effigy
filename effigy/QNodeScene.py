@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QGraphicsScene, QUndoStack, QUndoCommand
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QTransform
-from effigy.QNodeSceneNode import QNodeSceneNode
+from effigy.QNodeSceneNode import QNodeSceneNode, QNodeSceneNodeUndeletable
 from effigy.NodeIO import NodeIO, NodeLink
 
 class NodeSceneModuleManager:
@@ -38,7 +38,7 @@ class QNodeScene(QGraphicsScene):
         selectedItems = self.selectedItems()
 
         links = [x for x in selectedItems if issubclass(type(x), NodeLink)]
-        nodes = [x for x in selectedItems if issubclass(type(x), QNodeSceneNode)]
+        nodes = [x for x in selectedItems if issubclass(type(x), QNodeSceneNode) and not issubclass(type(x), QNodeSceneNodeUndeletable)]
         #remainder = [x for x in selectedItems if not issubclass(type(x), (QNodeSceneNode, NodeLink))]
 
         for link in links:

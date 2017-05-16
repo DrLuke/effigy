@@ -174,8 +174,6 @@ class NodeIO(QGraphicsItem):
             enditem = self.recursiveIOCheck(itematendpos)
             if enditem is not None:
                 try:
-                    print(self.classMultiplicity)
-                    print(enditem.classMultiplicity)
                     # Check if IO directions are compatible
                     if self.classDirection == enditem.classDirection and not self.classDirection == NodeIODirection.any and not enditem.classDirection == NodeIODirection.any:
                         raise InvalidLinkException

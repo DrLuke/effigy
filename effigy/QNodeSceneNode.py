@@ -69,7 +69,7 @@ It should never be placeable in the editor. However if you DO see this in the ed
             serdata["io"][io.id]["name"] = io.name
             serdata["io"][io.id]["links"] = []
             for nodeLink in io.nodeLinks:
-                serdata["io"][io.name]["links"].append([nodeLink.startIO.id, nodeLink.endIO.id, nodeLink.startIO.parent.id])
+                serdata["io"][io.name]["links"].append([nodeLink.startIO.id, nodeLink.endIO.id, nodeLink.startIO.parent.id])    #TODO: Add endio parent id?
         serdata["nodedata"] = self.serialize()
 
         return serdata
@@ -203,3 +203,6 @@ It should never be placeable in the editor. However if you DO see this in the ed
         return super().itemChange(change, value)
 
 
+class QNodeSceneNodeUndeletable(QNodeSceneNode):
+    """Nodes that can't be deleted from a sheet"""
+    pass
