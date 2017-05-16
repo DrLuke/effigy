@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QApplication
 from effigy import QNodeScene, QNodeSceneNode, QNodeView
 import sys
 
-from examples.simple.testnode import TestNode
+from examples.simple.testnode import TestNode, TestNode2
 
 def customexcepthook(type, value, traceback):
     print(traceback.print_exc())
@@ -17,7 +17,7 @@ def main():
 
     a = TestNode()
     b = TestNode()
-    c = TestNode()
+    c = TestNode2()
 
     scene.addItem(a)
     scene.addItem(b)

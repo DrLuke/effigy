@@ -112,7 +112,7 @@ class NodeIO(QGraphicsItem):
             self.endIO = endIO
             self.scene = scene
 
-            self.link = None
+            self.link = NodeLink(startIO=self.startIO, endIO=self.endIO, undostack=self.scene.undostack)
 
             self.firstredo = True
 
@@ -123,7 +123,6 @@ class NodeIO(QGraphicsItem):
                 self.link.startIO.nodeLinks.append(self.link)
                 self.link.endIO.nodeLinks.append(self.link)
             else:
-                self.link = NodeLink(startIO=self.startIO, endIO=self.endIO, undostack=self.scene.undostack)
                 self.firstredo = False
 
             self.link.updateBezier()
@@ -180,11 +179,13 @@ class NodeIO(QGraphicsItem):
                     if self.classDirection == NodeIODirection.input:
                         # On inputs, io is the ending point of bezier curve
                         linkAction = NodeIO.CreateLinkCommand(startIO=enditem, endIO=self, scene=self.scene())
-                        self.scene().undostack.push(linkAction)
+                        if linkAction.link.linkgood:
+                            self.scene().undostack.push(linkAction)
                     else:
                         # Everywhere else, io is start point of bezier curve
                         linkAction = NodeIO.CreateLinkCommand(startIO=self, endIO=enditem, scene=self.scene())
-                        self.scene().undostack.push(linkAction)
+                        if linkAction.link.linkgood:
+                            self.scene().undostack.push(linkAction)
                 except InvalidLinkException:
                     pass
 
@@ -194,12 +195,14 @@ class NodeIO(QGraphicsItem):
                     returnio = self.scene().moduleManager.selectNode(QGraphicsSceneMouseEvent.pos(), inType=self.iotype)
                     if issubclass(type(returnio), NodeIO):
                         linkAction = NodeIO.CreateLinkCommand(startIO=returnio, endIO=self, scene=self.scene())
-                        self.scene().undostack.push(linkAction)
+                        if linkAction.link.linkgood:
+                            self.scene().undostack.push(linkAction)
                 else:
                     returnio = self.scene().moduleManager.selectNode(QGraphicsSceneMouseEvent.pos(), outType=self.iotype)
                     if issubclass(type(returnio), NodeIO):
                         linkAction = NodeIO.CreateLinkCommand(startIO=self, endIO=returnio, scene=self.scene())
-                        self.scene().undostack.push(linkAction)
+                        if linkAction.link.linkgood:
+                            self.scene().undostack.push(linkAction)
                 self.scene().undostack.endMacro()
             self.scene().undostack.endMacro()
         elif QGraphicsSceneMouseEvent.button() == Qt.RightButton:
@@ -249,6 +252,8 @@ class NodeLink(QGraphicsPathItem):
         self.endIO = endIO
         self.undostack = undostack
 
+        self.linkgood = False
+
         # Connections with yourself are not allowed
         if startIO == endIO:
             raise InvalidLinkException("startIO (ID: %s) and endIO (ID: %s) can not be the same!" % (startIO.id, endIO.id))
@@ -256,7 +261,7 @@ class NodeLink(QGraphicsPathItem):
         if startIO is not None and endIO is not None:
             # Start type can be casted to end type
             if issubclass(startIO.iotype, endIO.iotype):
-
+                self.linkgood = True
                 # Remove duplicates
                 for link in self.startIO.nodeLinks:
                     if link.startIO == self.startIO and link.endIO == self.endIO:

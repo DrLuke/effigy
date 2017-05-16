@@ -33,7 +33,7 @@ class QNodeScene(QGraphicsScene):
             self.delSelection()
 
     def delSelection(self):
-        self.undostack.beginMacro("Delete Stuff")
+
 
         selectedItems = self.selectedItems()
 
@@ -41,15 +41,17 @@ class QNodeScene(QGraphicsScene):
         nodes = [x for x in selectedItems if issubclass(type(x), QNodeSceneNode) and not issubclass(type(x), QNodeSceneNodeUndeletable)]
         #remainder = [x for x in selectedItems if not issubclass(type(x), (QNodeSceneNode, NodeLink))]
 
-        for link in links:
-            self.undostack.push(type(link.startIO).DeleteLinkCommand(link.startIO))
+        if links and nodes:
+            self.undostack.beginMacro("Delete Stuff")
+            for link in links:
+                self.undostack.push(type(link.startIO).DeleteLinkCommand(link.startIO))
 
-        for node in nodes:
-            for io in node.IO.values():
-                self.undostack.push(type(io).DeleteLinkCommand(io))
-            self.undostack.push(QNodeScene.DeleteNodeCommand(node))
+            for node in nodes:
+                for io in node.IO.values():
+                    self.undostack.push(type(io).DeleteLinkCommand(io))
+                self.undostack.push(QNodeScene.DeleteNodeCommand(node))
 
-        self.undostack.endMacro()
+            self.undostack.endMacro()
 
     class DeleteNodeCommand(QUndoCommand):
         def __init__(self, node):
