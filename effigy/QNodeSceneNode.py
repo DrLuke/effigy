@@ -62,14 +62,14 @@ It should never be placeable in the editor. However if you DO see this in the ed
         serdata = {}    # Contains serialized data of this object
         serdata["pos"] = [self.pos().x(), self.pos().y()]
         serdata["uuid"] = self.id
-        serdata["type"] = str(type(self).author + "." + type(self).modulename + "." + type(self).__name__)
+        serdata["modulename"] = type(self).modulename
         serdata["io"] = {}
         for io in self.IO.values():
             serdata["io"][io.id] = {}
             serdata["io"][io.id]["name"] = io.name
             serdata["io"][io.id]["links"] = []
             for nodeLink in io.nodeLinks:
-                serdata["io"][io.name]["links"].append([nodeLink.startIO.id, nodeLink.endIO.id, nodeLink.startIO.parent.id])    #TODO: Add endio parent id?
+                serdata["io"][io.id]["links"].append([nodeLink.startIO.id, nodeLink.endIO.id, nodeLink.startIO.parent.id, nodeLink.endIO.parent.id])    #TODO: Add endio parent id?
         serdata["nodedata"] = self.serialize()
 
         return serdata
