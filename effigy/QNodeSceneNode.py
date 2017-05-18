@@ -21,7 +21,7 @@ class QNodeSceneNode(QGraphicsItem):
     description = """This node is the base class for all nodes.
 It should never be placeable in the editor. However if you DO see this in the editor, something went wrong!"""
 
-    def __init__(self, deserializedata=None, setID=None, *args, **kwargs):
+    def __init__(self, deserializeData=None, setID=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.IO = {}    # Stores all IO for this Node
@@ -31,10 +31,8 @@ It should never be placeable in the editor. However if you DO see this in the ed
         else:
             self.id = uuid.uuid4().int
 
-        if deserializedata is not None:
-            self.deserializeinternal(deserializedata)
-
-
+        if deserializeData is not None:
+            self.deserializeinternal(deserializeData)
 
         self.setFlag(QGraphicsItem.ItemIsMovable)   # Item can be dragged with left-click
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
@@ -69,7 +67,7 @@ It should never be placeable in the editor. However if you DO see this in the ed
             serdata["io"][io.id]["name"] = io.name
             serdata["io"][io.id]["links"] = []
             for nodeLink in io.nodeLinks:
-                serdata["io"][io.id]["links"].append([nodeLink.startIO.id, nodeLink.endIO.id, nodeLink.startIO.parentItem().id, nodeLink.endIO.parentItem().id])
+                serdata["io"][io.id]["links"].append([nodeLink.startIO.id, nodeLink.endIO.id, nodeLink.startIO.parentItem().id, nodeLink.endIO.parentItem().id])    #TODO: Add endio parent id?
         serdata["nodedata"] = self.serialize()
 
         return serdata
@@ -80,16 +78,17 @@ It should never be placeable in the editor. However if you DO see this in the ed
 
         # Reconstruct all
         sceneios = [x for x in self.scene().items() if issubclass(type(x), NodeIO)]
-        for pair in data["io"].values():    # FIXME: this is WRONG! How do I deserialize the node ID in a general way?
-            startio = None
-            endio = None
-            for io in sceneios:
-                if io.id == pair[0]:
-                    startio = io
-                if io.id == pair[1]:
-                    endio = io
-            if startio is not None and endio is not None:
-                NodeLink(startio, endio, setID=pair["id"])
+        for iodata in data["io"].values():
+            for link in iodata["links"]:
+                startio = None
+                endio = None
+                for io in sceneios:
+                    if io.id == link[0]:
+                        startio = io
+                    if io.id == link[1]:
+                        endio = io
+                if startio is not None and endio is not None:
+                    NodeLink(startio, endio)
 
         self.deserialize(data["nodedata"])
 
