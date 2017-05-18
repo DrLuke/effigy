@@ -23,7 +23,6 @@ It should never be placeable in the editor. However if you DO see this in the ed
 
     def __init__(self, deserializeData=None, setID=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.IO = {}    # Stores all IO for this Node
 
         if setID is not None:
@@ -31,15 +30,15 @@ It should never be placeable in the editor. However if you DO see this in the ed
         else:
             self.id = uuid.uuid4().int
 
-        if deserializeData is not None:
-            self.deserializeinternal(deserializeData)
-
         self.setFlag(QGraphicsItem.ItemIsMovable)   # Item can be dragged with left-click
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
         self.setFlag(QGraphicsItem.ItemIsSelectable)
 
         self.addGraphicsItems()
         self.addIO()
+
+        if deserializeData is not None:
+            self.deserializeinternal(deserializeData)
 
     def serializeinternal(self):
         """Builtin internal node serializer, shouldn't be called from outside"""
@@ -64,6 +63,7 @@ It should never be placeable in the editor. However if you DO see this in the ed
         serdata["io"] = {}
         for io in self.IO.values():
             serdata["io"][io.id] = {}
+            serdata["io"][io.id]["uuid"] = io.id
             serdata["io"][io.id]["name"] = io.name
             serdata["io"][io.id]["links"] = []
             for nodeLink in io.nodeLinks:
@@ -79,6 +79,10 @@ It should never be placeable in the editor. However if you DO see this in the ed
         # Reconstruct all
         sceneios = [x for x in self.scene().items() if issubclass(type(x), NodeIO)]
         for iodata in data["io"].values():
+            if iodata["name"] in self.IO:
+                self.IO[iodata["name"]].id = iodata["uuid"]
+
+        for iodata in data["io"].values():
             for link in iodata["links"]:
                 startio = None
                 endio = None
@@ -88,7 +92,9 @@ It should never be placeable in the editor. However if you DO see this in the ed
                     if io.id == link[1]:
                         endio = io
                 if startio is not None and endio is not None:
-                    NodeLink(startio, endio)
+                    nl = NodeLink(startio, endio)
+                    nl.updateBezier()
+                    self.scene().addItem(nl)
 
         self.deserialize(data["nodedata"])
 
