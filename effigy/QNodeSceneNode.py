@@ -69,7 +69,7 @@ It should never be placeable in the editor. However if you DO see this in the ed
             serdata["io"][io.id]["name"] = io.name
             serdata["io"][io.id]["links"] = []
             for nodeLink in io.nodeLinks:
-                serdata["io"][io.id]["links"].append([nodeLink.startIO.id, nodeLink.endIO.id, nodeLink.startIO.parent.id, nodeLink.endIO.parent.id])    #TODO: Add endio parent id?
+                serdata["io"][io.id]["links"].append([nodeLink.startIO.id, nodeLink.endIO.id, nodeLink.startIO.parentItem().id, nodeLink.endIO.parentItem().id])
         serdata["nodedata"] = self.serialize()
 
         return serdata
