@@ -41,7 +41,7 @@ class QNodeScene(QGraphicsScene):
         nodes = [x for x in selectedItems if issubclass(type(x), QNodeSceneNode) and not issubclass(type(x), QNodeSceneNodeUndeletable)]
         #remainder = [x for x in selectedItems if not issubclass(type(x), (QNodeSceneNode, NodeLink))]
 
-        if links and nodes:
+        if links or nodes:
             self.undostack.beginMacro("Delete Stuff")
             for link in links:
                 self.undostack.push(type(link.startIO).DeleteLinkCommand(link.startIO))

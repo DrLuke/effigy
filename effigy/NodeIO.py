@@ -37,8 +37,8 @@ class NodeIO(QGraphicsItem):
 
 
     def __init__(self, iotype, name, displaystr=None, setID=None, *args, **kwargs):
-        if type(iotype) is not type:
-            raise TypeError("iotype argument is of type '%s', but must be of type 'type'." % type(iotype))
+        if type(iotype) is not type and type(iotype) is not list:
+            raise TypeError("iotype argument is of type '%s', but must be of type 'type' or 'list'." % type(iotype))
 
         super().__init__(*args, **kwargs)
 
@@ -214,12 +214,12 @@ class NodeIO(QGraphicsItem):
 class NodeInput(NodeIO):
     """General Input class for Node links. See NodeIO class for more information."""
     classDirection = NodeIODirection.input
-    classMultiplicity = NodeIOMultiplicity.multiple
+    classMultiplicity = NodeIOMultiplicity.single
 
 class NodeOutput(NodeIO):
     """General Output class for Node links. See NodeIO class for more information."""
     classDirection = NodeIODirection.output
-    classMultiplicity = NodeIOMultiplicity.single
+    classMultiplicity = NodeIOMultiplicity.multiple
 
 
 class InvalidLinkException(Exception):
@@ -260,7 +260,20 @@ class NodeLink(QGraphicsPathItem):
 
         if startIO is not None and endIO is not None:
             # Start type can be casted to end type
-            if issubclass(startIO.iotype, endIO.iotype):
+            typesCompatible = False
+            if type(endIO.iotype) is list:
+                if len(endIO.iotype) == 0:
+                    typesCompatible = True
+                else:
+                    for iotype in endIO.iotype:
+                        if issubclass(startIO.iotype, iotype):
+                            typesCompatible = True
+                            break
+
+            else:
+                typesCompatible = issubclass(startIO.iotype, endIO.iotype)
+
+            if typesCompatible:
                 self.linkgood = True
                 # Remove duplicates
                 for link in self.startIO.nodeLinks:

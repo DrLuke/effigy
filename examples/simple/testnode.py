@@ -47,8 +47,8 @@ class TestNode2(QNodeSceneNode):
         newnode.setPos(20, 10)
         self.IO["output"] = newnode
 
-        newnode = NodeInput(int, parent=self, name="input")
-        newnode.setPos(-20, 10)
+        newnode = NodeInput([int, str], parent=self, name="input")
+        newnode.setPos(-25, 10)
         self.IO["input"] = newnode
 
     def boundingRect(self):
